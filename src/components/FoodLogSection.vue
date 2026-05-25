@@ -5,6 +5,7 @@ import {
   deleteFoodLog,
   getFoodLogsByDate,
 } from "../mock/mockDatabase";
+import { searchFood } from "../services/useFoodAPI";
 
 const props = defineProps({
   selectedDate: {
@@ -16,14 +17,12 @@ const props = defineProps({
 const emit = defineEmits(["food-log-changed"]);
 
 const foodLogs = ref([]);
-
 const filterDate = ref(props.selectedDate);
-
+const isFetchingNutrition = ref(false);
 
 const newFood = reactive({
   name: "",
   quantity: 0,
-  unit: "grams",
   calories: 0,
   carbs: 0,
   protein: 0,
@@ -39,7 +38,7 @@ watch(
   (newDate) => {
     filterDate.value = newDate;
     loadFoodLogs();
-  },
+  }
 );
 
 function loadFoodLogs() {
@@ -53,19 +52,67 @@ function loadFoodLogs() {
   foodLogs.value = result.data;
 }
 
+async function fetchNutritionData() {
+  if (!newFood.name.trim()) {
+    alert("Please enter a food name first.");
+    return;
+  }
+
+  if (!newFood.quantity || Number(newFood.quantity) <= 0) {
+    alert("Quantity in grams must be greater than 0.");
+    return;
+  }
+
+  isFetchingNutrition.value = true;
+
+  const result = await searchFood(
+    newFood.name,
+    newFood.quantity
+  );
+
+  isFetchingNutrition.value = false;
+
+  if (result.code !== 0) {
+    alert(result.message);
+    return;
+  }
+
+  newFood.name = result.data.description;
+  newFood.calories = result.data.calories;
+  newFood.carbs = result.data.carbs;
+  newFood.protein = result.data.protein;
+  newFood.fats = result.data.fats;
+}
+
 function submitFood() {
   if (!newFood.name.trim()) {
     alert("Food name is required.");
     return;
   }
 
-  if (newFood.quantity <= 0) {
-    alert("Quantity must be greater than 0.");
+  if (!newFood.quantity || Number(newFood.quantity) <= 0) {
+    alert("Quantity in grams must be greater than 0.");
+    return;
+  }
+
+  const hasNutritionData =
+    Number(newFood.calories) > 0 ||
+    Number(newFood.carbs) > 0 ||
+    Number(newFood.protein) > 0 ||
+    Number(newFood.fats) > 0;
+
+  if (!hasNutritionData) {
+    alert("Please fetch nutrition data before submitting.");
     return;
   }
 
   const foodData = {
-    ...newFood,
+    name: newFood.name,
+    quantity: Number(newFood.quantity),
+    calories: Number(newFood.calories),
+    carbs: Number(newFood.carbs),
+    protein: Number(newFood.protein),
+    fats: Number(newFood.fats),
     create_time: new Date(filterDate.value).toISOString(),
   };
 
@@ -107,7 +154,6 @@ function clearForm() {
 function resetForm() {
   newFood.name = "";
   newFood.quantity = 0;
-  newFood.unit = "grams";
   newFood.calories = 0;
   newFood.carbs = 0;
   newFood.protein = 0;
@@ -120,10 +166,14 @@ function resetForm() {
     <h2>Food Log</h2>
 
     <div class="food-log-layout">
-      <!-- Left: Food log table -->
+      <!-- Left: Food table -->
       <div class="card food-table-card">
         <h3>Food Log</h3>
 
+        <!--
+          DEV ONLY DATE FILTER:
+          Nếu không muốn hiện khi demo, có thể comment nguyên div này.
+        -->
         <div class="food-filter-row">
           <label>
             Food date:
@@ -134,7 +184,9 @@ function resetForm() {
             />
           </label>
 
-          <button type="button" @click="changeFilterDate">Submit</button>
+          <button type="button" @click="changeFilterDate">
+            Submit
+          </button>
         </div>
 
         <table class="food-table">
@@ -159,7 +211,7 @@ function resetForm() {
 
             <tr v-for="food in foodLogs" :key="food.id">
               <td>{{ food.name }}</td>
-              <td>{{ food.quantity }} {{ food.unit }}</td>
+              <td>{{ food.quantity }} g</td>
               <td>{{ food.calories }}</td>
               <td>{{ food.carbs }}</td>
               <td>{{ food.protein }}</td>
@@ -188,26 +240,30 @@ function resetForm() {
             <input
               v-model="newFood.name"
               type="text"
-              placeholder="Example: Rice"
+              placeholder="Example: egg"
             />
           </label>
 
-          <div class="quantity-row">
-            <label>
-              Quantity:
-              <input
-                v-model.number="newFood.quantity"
-                type="number"
-                min="0"
-                step="0.1"
-              />
-            </label>
+          <label>
+            Quantity:
+            <input
+              v-model.number="newFood.quantity"
+              type="number"
+              min="0"
+              step="0.1"
+              placeholder="grams"
+            />
+            grams
+          </label>
 
-            <select v-model="newFood.unit">
-              <option value="grams">grams</option>
-              <option value="units">units</option>
-            </select>
-          </div>
+          <button
+            type="button"
+            class="fetch-food-btn"
+            :disabled="isFetchingNutrition"
+            @click="fetchNutritionData"
+          >
+            {{ isFetchingNutrition ? "Fetching..." : "Fetch Nutrition" }}
+          </button>
 
           <label>
             Calories:
@@ -253,18 +309,16 @@ function resetForm() {
             />
           </label>
 
-          <button
-            type="button"
-            class="fetch-food-btn"
-            @click="fetchNutritionData"
-          >
-            Fetch Nutrition
-          </button>
-
           <div class="add-food-actions">
-            <button type="submit" class="submit-food-btn">Submit</button>
+            <button type="submit">
+              Submit
+            </button>
 
-            <button type="button" class="clear-food-btn" @click="clearForm">
+            <button
+              type="button"
+              class="clear-food-btn"
+              @click="clearForm"
+            >
               Clear
             </button>
           </div>

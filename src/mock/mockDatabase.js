@@ -92,7 +92,6 @@ export function createFoodLog(food) {
     user_id: 1,
     name: food.name,
     quantity: Number(food.quantity),
-    unit: food.unit || "grams",
     calories: Number(food.calories) || 0,
     carbs: Number(food.carbs) || 0,
     protein: Number(food.protein) || 0,

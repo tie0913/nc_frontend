@@ -262,6 +262,7 @@ const carbPercent = computed(() => {
 });
 
 const selectedDiagramMetric = ref("calories");
+const selectedDiagramType = ref("bar");
 
 const diagramMetricOptions = [
   { value: "calories", label: "Calories", suffix: "kcal" },
@@ -269,7 +270,10 @@ const diagramMetricOptions = [
   { value: "carbs", label: "Carbs", suffix: "g" },
   { value: "fats", label: "Fats", suffix: "g" },
 ];
-
+const diagramTypeOptions = [
+  { value: "bar", label: "Bar Chart" },
+  { value: "line", label: "Line Chart" },
+];
 const selectedDiagramOption = computed(() => {
   return (
     diagramMetricOptions.find(
@@ -279,7 +283,7 @@ const selectedDiagramOption = computed(() => {
 });
 
 const maxDiagramValue = computed(() => {
-  if (!props.diagramData.length) {
+  if (!props.diagramData || props.diagramData.length === 0) {
     return 0;
   }
 
@@ -288,6 +292,37 @@ const maxDiagramValue = computed(() => {
       return Number(item[selectedDiagramMetric.value]) || 0;
     }),
   );
+});
+
+const lineGraphPoints = computed(() => {
+  if (!props.diagramData || props.diagramData.length === 0) {
+    return "";
+  }
+
+  const chartWidth = 520;
+  const chartHeight = 180;
+  const padding = 24;
+
+  const maxValue = maxDiagramValue.value || 1;
+  const itemCount = props.diagramData.length;
+
+  return props.diagramData
+    .map((item, index) => {
+      const value = Number(item[selectedDiagramMetric.value]) || 0;
+
+      const x =
+        itemCount === 1
+          ? chartWidth / 2
+          : padding + (index * (chartWidth - padding * 2)) / (itemCount - 1);
+
+      const y =
+        chartHeight -
+        padding -
+        (value / maxValue) * (chartHeight - padding * 2);
+
+      return `${x},${y}`;
+    })
+    .join(" ");
 });
 </script>
 
@@ -580,22 +615,41 @@ const maxDiagramValue = computed(() => {
         <div class="diagram-header">
           <h3>Nutrition Diagram</h3>
 
-          <select v-model="selectedDiagramMetric">
-            <option
-              v-for="option in diagramMetricOptions"
-              :key="option.value"
-              :value="option.value"
-            >
-              {{ option.label }}
-            </option>
-          </select>
+          <div class="diagram-controls">
+            <label>
+              Type:
+              <select v-model="selectedDiagramType">
+                <option
+                  v-for="option in diagramTypeOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+
+            <label>
+              Metric:
+              <select v-model="selectedDiagramMetric">
+                <option
+                  v-for="option in diagramMetricOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+          </div>
         </div>
 
         <p v-if="diagramData.length === 0" class="empty-text">
           No diagram data available for this date.
         </p>
 
-        <div v-else class="bar-chart">
+        <!-- Bar Progress Diagram -->
+        <div v-else-if="selectedDiagramType === 'bar'" class="bar-chart">
           <div
             v-for="item in diagramData"
             :key="item.date"
@@ -623,6 +677,49 @@ const maxDiagramValue = computed(() => {
               {{ selectedDiagramOption.suffix }}
             </span>
           </div>
+        </div>
+
+        <!-- Line Graph Diagram -->
+        <div v-else class="line-chart-wrapper">
+          <svg
+            class="line-chart-svg"
+            viewBox="0 0 520 180"
+            preserveAspectRatio="none"
+          >
+            <line x1="24" y1="156" x2="496" y2="156" class="chart-axis" />
+            <line x1="24" y1="24" x2="24" y2="156" class="chart-axis" />
+
+            <polyline :points="lineGraphPoints" class="line-chart-polyline" />
+
+            <circle
+              v-for="(item, index) in diagramData"
+              :key="`point-${item.date}`"
+              class="line-chart-point"
+              :cx="
+                diagramData.length === 1
+                  ? 260
+                  : 24 + (index * (520 - 48)) / (diagramData.length - 1)
+              "
+              :cy="
+                180 -
+                24 -
+                ((Number(item[selectedDiagramMetric]) || 0) /
+                  (maxDiagramValue || 1)) *
+                  (180 - 48)
+              "
+              r="4"
+            />
+          </svg>
+
+          <div class="line-chart-labels">
+            <span v-for="item in diagramData" :key="`label-${item.date}`">
+              {{ item.date.slice(5) }}
+            </span>
+          </div>
+
+          <p class="line-chart-summary">
+            Showing {{ selectedDiagramOption.label }} trend by date.
+          </p>
         </div>
       </div>
     </template>

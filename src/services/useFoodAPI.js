@@ -1,3 +1,4 @@
+import { apiRequest } from "./apiClient";
 const API_KEY = "XgbOn8NEonyrgz3eHJ3tx4eYRXMWqU4oP0fbdGOC";
 const API_BASE_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
 
@@ -81,4 +82,65 @@ export async function searchFood(foodName, grams) {
     } catch (error) {
         return createResult(1, `An error occurred while fetching data: ${error.message}`, null);
     }
+}
+
+export async function createFoodLogAPI(foodData) {
+  const payload = {
+    name: foodData.name,
+    quantity: Number(foodData.quantity),
+    calories: Math.round(Number(foodData.calories) || 0),
+    carbs: Math.round(Number(foodData.carbs) || 0),
+    protein: Math.round(Number(foodData.protein) || 0),
+    fats: Math.round(Number(foodData.fats) || 0),
+  };
+
+  console.log("[FoodLog API] POST /foodlog payload:", payload);
+
+  const result = await apiRequest("/foodlog", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  console.log("[FoodLog API] POST /foodlog response:", result);
+
+  return result;
+}
+
+export async function getFoodLogsAPI(page = 1, pageSize = 100) {
+  const query = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+
+  console.log("[FoodLog API] GET /foodlog query:", query.toString());
+
+  const result = await apiRequest(`/foodlog?${query.toString()}`, {
+    method: "GET",
+  });
+
+  console.log("[FoodLog API] GET /foodlog response:", result);
+
+  return result;
+}
+
+export async function getDiagramDataAPI(startDate, endDate) {
+  const query = new URLSearchParams({
+    start_date: startDate,
+    end_date: endDate,
+  });
+
+  console.log("[FoodLog API] GET /diagram query:", query.toString());
+
+  const result = await apiRequest(`/diagram?${query.toString()}`, {
+    method: "GET",
+  });
+
+  console.log("[FoodLog API] GET /diagram response:", result);
+
+  return result;
+}
+export function getDateNDaysAgo(days) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString().split("T")[0];
 }

@@ -1,24 +1,25 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from "vue";
-import {
-  createFoodLog,
-  deleteFoodLog,
-  getFoodLogsByDate,
-} from "../mock/mockDatabase";
-import { searchFood } from "../services/useFoodAPI";
+import { searchFood, createFoodLogAPI, getFoodLogsAPI, getDiagramDataAPI } from "../services/useFoodAPI";
 
 const props = defineProps({
+  currentUser: {
+    type: Object,
+    default: null,
+  },
   selectedDate: {
     type: String,
     required: true,
   },
 });
 
-const emit = defineEmits(["food-log-changed"]);
+const emit = defineEmits(["food-log-changed", "require-auth"]);
 
 const foodLogs = ref([]);
 const filterDate = ref(props.selectedDate);
 const isFetchingNutrition = ref(false);
+const isLoadingFoodLogs = ref(false);
+const errorMessage = ref("");
 
 const newFood = reactive({
   name: "",
@@ -41,15 +42,43 @@ watch(
   }
 );
 
-function loadFoodLogs() {
-  const result = getFoodLogsByDate(filterDate.value);
+watch(
+  () => props.currentUser,
+  () =>{
+    loadFoodLogs();
+  },
+  {immediate: true}
+)
 
-  if (result.code !== 0) {
-    alert(result.message);
+function getDateOnly(dateValue){
+  return new Date(dateValue).toISOString().split("T")[0];
+}
+
+async function loadFoodLogs() {
+  errorMessage.value = "";
+
+  if (!props.currentUser || !props.currentUser.id) {
+    foodLogs.value = [];
     return;
   }
 
-  foodLogs.value = result.data;
+  isLoadingFoodLogs.value = true;
+
+  const result = await getFoodLogsAPI(1, 100);
+
+  isLoadingFoodLogs.value = false;
+
+  if( result.code !== 0){
+    errorMessage.value = result.message || "Failed to load food logs.";
+    foodLogs.value = [];
+    return;
+  }
+
+  const items = Array.isArray(result.data?.items) ? result.data.items : [];
+
+  foodLogs.value = items.filter(
+    (item) => getDateOnly(item.create_time) === getDateOnly(filterDate.value)
+  );
 }
 
 async function fetchNutritionData() {
@@ -84,7 +113,12 @@ async function fetchNutritionData() {
   newFood.fats = result.data.fats;
 }
 
-function submitFood() {
+async function submitFood() {
+  if (!props.currentUser?.id) {
+    emit("require-auth");
+    return;
+  }
+
   if (!newFood.name.trim()) {
     alert("Food name is required.");
     return;
@@ -106,41 +140,38 @@ function submitFood() {
     return;
   }
 
-  const foodData = {
+  const result = await createFoodLogAPI({
     name: newFood.name,
     quantity: Number(newFood.quantity),
     calories: Number(newFood.calories),
     carbs: Number(newFood.carbs),
     protein: Number(newFood.protein),
     fats: Number(newFood.fats),
-    create_time: new Date(filterDate.value).toISOString(),
-  };
-
-  const result = createFoodLog(foodData);
+  });
 
   if (result.code !== 0) {
-    alert(result.message);
+    alert(result.message || "Failed to create food log.");
     return;
   }
 
   resetForm();
-  loadFoodLogs();
+  await loadFoodLogs();
 
   emit("food-log-changed", filterDate.value);
 }
 
-function removeFood(foodId) {
-  const result = deleteFoodLog(foodId);
+// function removeFood(foodId) {
+//   const result = deleteFoodLog(foodId);
 
-  if (result.code !== 0) {
-    alert(result.message);
-    return;
-  }
+//   if (result.code !== 0) {
+//     alert(result.message);
+//     return;
+//   }
 
-  loadFoodLogs();
+//   loadFoodLogs();
 
-  emit("food-log-changed", filterDate.value);
-}
+//   emit("food-log-changed", filterDate.value);
+// }
 
 function changeFilterDate() {
   loadFoodLogs();
@@ -164,8 +195,15 @@ function resetForm() {
 <template>
   <section id="food-log" class="page-section">
     <h2>Food Log</h2>
+    <p v-if="!currentUser" class="empty-section-message">
+      Please sign in to view and add your food log.
+    </p>
 
-    <div class="food-log-layout">
+    <p v-if="errorMessage" class="food-error-text">
+      {{ errorMessage }}
+    </p>
+
+    <div v-if="currentUser" class="food-log-layout">
       <!-- Left: Food table -->
       <div class="card food-table-card">
         <h3>Food Log</h3>
@@ -184,9 +222,7 @@ function resetForm() {
             />
           </label>
 
-          <button type="button" @click="changeFilterDate">
-            Submit
-          </button>
+          <button type="button" @click="changeFilterDate">Submit</button>
         </div>
 
         <table class="food-table">
@@ -198,14 +234,18 @@ function resetForm() {
               <th>Carbs</th>
               <th>Protein</th>
               <th>Fat</th>
-              <th></th>
+              <!-- <th></th> -->
             </tr>
           </thead>
 
           <tbody>
             <tr v-if="foodLogs.length === 0">
-              <td colspan="7" class="empty-table-text">
-                No food recorded for this date.
+              <td colspan="6" class="empty-table-text">
+                {{
+                  isLoadingFoodLogs
+                    ? "Loading..."
+                    : "No food recorded for this date."
+                }}
               </td>
             </tr>
 
@@ -216,7 +256,7 @@ function resetForm() {
               <td>{{ food.carbs }}</td>
               <td>{{ food.protein }}</td>
               <td>{{ food.fats }}</td>
-              <td>
+              <!-- <td>
                 <button
                   type="button"
                   class="delete-food-btn"
@@ -224,7 +264,7 @@ function resetForm() {
                 >
                   -
                 </button>
-              </td>
+              </td> -->
             </tr>
           </tbody>
         </table>
@@ -310,15 +350,9 @@ function resetForm() {
           </label>
 
           <div class="add-food-actions">
-            <button type="submit">
-              Submit
-            </button>
+            <button type="submit">Submit</button>
 
-            <button
-              type="button"
-              class="clear-food-btn"
-              @click="clearForm"
-            >
+            <button type="button" class="clear-food-btn" @click="clearForm">
               Clear
             </button>
           </div>

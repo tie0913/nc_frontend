@@ -287,70 +287,6 @@ const carbPercent = computed(() => {
   );
 });
 
-// const selectedDiagramMetric = ref("calories");
-// const selectedDiagramType = ref("bar");
-
-// const diagramMetricOptions = [
-//   { value: "calories", label: "Calories", suffix: "kcal" },
-//   { value: "protein", label: "Protein", suffix: "g" },
-//   { value: "carbs", label: "Carbs", suffix: "g" },
-//   { value: "fats", label: "Fats", suffix: "g" },
-// ];
-// const diagramTypeOptions = [
-//   { value: "bar", label: "Bar Chart" },
-//   { value: "line", label: "Line Chart" },
-// ];
-// const selectedDiagramOption = computed(() => {
-//   return (
-//     diagramMetricOptions.find(
-//       (option) => option.value === selectedDiagramMetric.value,
-//     ) || diagramMetricOptions[0]
-//   );
-// });
-
-// const maxDiagramValue = computed(() => {
-//   if (!props.diagramData || props.diagramData.length === 0) {
-//     return 0;
-//   }
-
-//   return Math.max(
-//     ...props.diagramData.map((item) => {
-//       return Number(item[selectedDiagramMetric.value]) || 0;
-//     }),
-//   );
-// });
-
-// const lineGraphPoints = computed(() => {
-//   if (!props.diagramData || props.diagramData.length === 0) {
-//     return "";
-//   }
-
-//   const chartWidth = 520;
-//   const chartHeight = 180;
-//   const padding = 24;
-
-//   const maxValue = maxDiagramValue.value || 1;
-//   const itemCount = props.diagramData.length;
-
-//   return props.diagramData
-//     .map((item, index) => {
-//       const value = Number(item[selectedDiagramMetric.value]) || 0;
-
-//       const x =
-//         itemCount === 1
-//           ? chartWidth / 2
-//           : padding + (index * (chartWidth - padding * 2)) / (itemCount - 1);
-
-//       const y =
-//         chartHeight -
-//         padding -
-//         (value / maxValue) * (chartHeight - padding * 2);
-
-//       return `${x},${y}`;
-//     })
-//     .join(" ");
-// });
-
 const diagramData = ref([]);
 const isDiagramLoading = ref(false);
 const diagramError = ref("");
@@ -427,44 +363,87 @@ const diagram7Days = computed(() => {
   });
 });
 
-const diagramMaxValues = computed(() => {
-  const maxValues = {
-    calories: 1,
-    protein: 1,
-    fats: 1,
-    carbs: 1,
+// const diagramMaxValues = computed(() => {
+//   const maxValues = {
+//     calories: 1,
+//     protein: 1,
+//     fats: 1,
+//     carbs: 1,
+//   };
+
+//   for (const day of diagram7Days.value) {
+//     maxValues.calories = Math.max(maxValues.calories, day.calories);
+//     maxValues.protein = Math.max(maxValues.protein, day.protein);
+//     maxValues.fats = Math.max(maxValues.fats, day.fats);
+//     maxValues.carbs = Math.max(maxValues.carbs, day.carbs);
+//   }
+
+//   return maxValues;
+// });
+
+// function getDiagramBarHeight(value, metric) {
+//   const max = diagramMaxValues.value[metric] || 1;
+
+//   if (!value || value <= 0) {
+//     return "4px";
+//   }
+
+//   const maxHeight = 180;
+//   const minHeight = 10;
+//   const height = (Number(value) / max) * maxHeight;
+
+//   return `${Math.max(height, minHeight)}px`;
+// }
+const diagramTargets = computed(() => {
+  return {
+    calories: Number(props.dailyNutrition?.caloriesTarget || 2000),
+    protein: Number(props.dailyNutrition?.proteinTarget || 100),
+    fats: Number(props.dailyNutrition?.fatTarget || 60),
+    carbs: Number(props.dailyNutrition?.carbTarget || 250),
   };
+});
+
+const maxDiagramRatio = computed(() => {
+  const ratios = [];
 
   for (const day of diagram7Days.value) {
-    maxValues.calories = Math.max(maxValues.calories, day.calories);
-    maxValues.protein = Math.max(maxValues.protein, day.protein);
-    maxValues.fats = Math.max(maxValues.fats, day.fats);
-    maxValues.carbs = Math.max(maxValues.carbs, day.carbs);
+    ratios.push(day.calories / diagramTargets.value.calories);
+    ratios.push(day.protein / diagramTargets.value.protein);
+    ratios.push(day.fats / diagramTargets.value.fats);
+    ratios.push(day.carbs / diagramTargets.value.carbs);
   }
 
-  return maxValues;
+  return Math.max(...ratios, 0.05);
 });
 
 function getDiagramBarHeight(value, metric) {
-  const max = diagramMaxValues.value[metric] || 1;
+  const target = Number(diagramTargets.value[metric] || 1);
 
   if (!value || value <= 0) {
     return "4px";
   }
 
+  const ratio = Number(value) / target;
+  const normalizedRatio = ratio / maxDiagramRatio.value;
+
   const maxHeight = 180;
   const minHeight = 10;
-  const height = (Number(value) / max) * maxHeight;
+  const height = normalizedRatio * maxHeight;
 
   return `${Math.max(height, minHeight)}px`;
 }
-
 function formatDiagramValue(value, metric) {
   if (metric === "calories") {
     return `${Math.round(value)} kcal`;
   }
 
   return `${Math.round(value)} g`;
+}
+function getDiagramRatioText(value, metric) {
+  const target = Number(diagramTargets.value[metric] || 1);
+  const percent = Math.round((Number(value || 0) / target) * 100);
+
+  return `${percent}% of target`;
 }
 
 onMounted(async () => {
@@ -789,7 +768,7 @@ onMounted(async () => {
                   :style="{
                     height: getDiagramBarHeight(day.calories, 'calories'),
                   }"
-                  :title="`Calories: ${formatDiagramValue(day.calories, 'calories')}`"
+                  :title="`Calories: ${formatDiagramValue(day.calories, 'calories')} • ${getDiagramRatioText(day.calories, 'calories')}`"
                 ></div>
               </div>
 
@@ -799,7 +778,7 @@ onMounted(async () => {
                   :style="{
                     height: getDiagramBarHeight(day.protein, 'protein'),
                   }"
-                  :title="`Protein: ${formatDiagramValue(day.protein, 'protein')}`"
+                  :title="`Protein: ${formatDiagramValue(day.protein, 'protein')} • ${getDiagramRatioText(day.protein, 'protein')}`"
                 ></div>
               </div>
 
@@ -807,7 +786,7 @@ onMounted(async () => {
                 <div
                   class="diagram-bar fats-bar"
                   :style="{ height: getDiagramBarHeight(day.fats, 'fats') }"
-                  :title="`Fats: ${formatDiagramValue(day.fats, 'fats')}`"
+                  :title="`Fats: ${formatDiagramValue(day.fats, 'fats')} • ${getDiagramRatioText(day.fats, 'fats')}`"
                 ></div>
               </div>
 
@@ -815,7 +794,7 @@ onMounted(async () => {
                 <div
                   class="diagram-bar carbs-bar"
                   :style="{ height: getDiagramBarHeight(day.carbs, 'carbs') }"
-                  :title="`Carbs: ${formatDiagramValue(day.carbs, 'carbs')}`"
+                  :title="`Carbs: ${formatDiagramValue(day.carbs, 'carbs')} • ${getDiagramRatioText(day.carbs, 'carbs')}`"
                 ></div>
               </div>
             </div>
@@ -851,7 +830,6 @@ onMounted(async () => {
             <span>Carbs</span>
           </div>
         </div>
-
       </section>
     </template>
   </section>

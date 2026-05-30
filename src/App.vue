@@ -11,9 +11,9 @@ import { getToken } from "./services/apiClient";
 import { getCurrentUser, signOutUser } from "./services/userAPI";
 import { getProfileFromAPI } from "./services/profileAPI";
 import { calculateNutritionTargets } from "./services/nutritionCalculator";
-import { getDiagramDataAPI, getDateNDaysAgo } from "./services/useFoodAPI";
+import { getDiagramDataAPI, getDateNDaysAgo, formatLocalDate } from "./services/useFoodAPI";
 
-const selectedFoodDate = ref(new Date().toISOString().split("T")[0]);
+const selectedFoodDate = ref(formatLocalDate(new Date()));
 const diagramData = ref([]);
 
 const currentUser = ref(null);
@@ -113,7 +113,7 @@ function resetDailyNutrition() {
   dailyNutrition.carbTarget = 0;
 }
 
-async function refreshDailyNutrition(date) {
+async function refreshDailyNutrition(date = formatLocalDate(new Date())) {
   selectedFoodDate.value = date;
 
   if (!currentUser.value?.id) {
@@ -125,13 +125,15 @@ async function refreshDailyNutrition(date) {
   await refreshNutritionTargets();
 
   const startDate = getDateNDaysAgo(6);
-  const endDate = date;
+  const endDate = formatLocalDate(new Date());
+
   const result = await getDiagramDataAPI(startDate, endDate);
 
-  console.log("[App] GET /diagram daily result:", result);
+  console.log("[App] GET /diagram result:", result);
 
   if (result.code !== 0) {
     alert(result.message);
+
     dailyNutrition.caloriesCurrent = 0;
     dailyNutrition.proteinCurrent = 0;
     dailyNutrition.fatCurrent = 0;
@@ -142,17 +144,18 @@ async function refreshDailyNutrition(date) {
 
   diagramData.value = Array.isArray(result.data) ? result.data : [];
 
-  const todaySummary = diagramData.value[0] ||{
-    calories: 0,
-    protein: 0,
-    fats: 0,
-    carbs: 0,
-  }
+  const selectedSummary =
+    diagramData.value.find((item) => item.date === selectedFoodDate.value) || {
+      calories: 0,
+      protein: 0,
+      fats: 0,
+      carbs: 0,
+    };
 
-  dailyNutrition.caloriesCurrent = todaySummary.calories;
-  dailyNutrition.proteinCurrent = todaySummary.protein;
-  dailyNutrition.fatCurrent = todaySummary.fats;
-  dailyNutrition.carbCurrent = todaySummary.carbs;
+  dailyNutrition.caloriesCurrent = selectedSummary.calories;
+  dailyNutrition.proteinCurrent = selectedSummary.protein;
+  dailyNutrition.fatCurrent = selectedSummary.fats;
+  dailyNutrition.carbCurrent = selectedSummary.carbs;
 }
 
 function openAuthModal(mode) {

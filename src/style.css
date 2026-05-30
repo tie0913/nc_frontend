@@ -496,13 +496,13 @@ textarea:focus {
 ========================= */
 
 .diagram-card {
-  width: 620px;
+  width: min(980px, 100%);
   margin: 40px auto 0;
-  padding: 18px;
-
-  background-color: white;
-  border: 1px solid #333;
-  border-radius: 18px;
+  padding: 22px 24px;
+  background: #fbfcf8;
+  border: 1px solid #d3dccd;
+  border-radius: 20px;
+  box-shadow: 0 14px 28px rgba(41, 70, 45, 0.12);
 }
 
 .diagram-header {
@@ -524,131 +524,190 @@ textarea:focus {
   background-color: white;
 }
 
-.diagram-controls {
+.diagram-header {
   display: flex;
-  gap: 10px;
   align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
 }
 
-.diagram-controls select {
-  min-width: 130px;
-  padding: 7px 10px;
+.diagram-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #102016;
+}
 
-  border: 1px solid var(--border-soft);
-  border-radius: 10px;
+.diagram-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #607061;
+}
 
-  background-color: #ffffff;
-  color: var(--text-main);
-
+.diagram-refresh-btn {
+  border: 1px solid #c6d4c0;
+  background: #ffffff;
+  color: #223326;
+  border-radius: 12px;
+  padding: 8px 14px;
+  cursor: pointer;
   font-weight: 600;
 }
 
-.bar-chart {
+.diagram-refresh-btn:hover {
+  background: #eef5ea;
+}
+
+.diagram-status {
+  padding: 30px 0;
+  text-align: center;
+  color: #687566;
+  font-size: 14px;
+}
+
+.diagram-error {
+  color: #a50021;
+}
+
+.diagram-vertical-chart {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 270px;
+  overflow-x: auto;
+  padding: 12px 4px 4px;
+}
+
+.diagram-day-group {
+  min-width: 92px;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.bar-chart-row {
-  display: grid;
-  grid-template-columns: 90px 1fr 90px;
   align-items: center;
-  gap: 10px;
 }
 
-.bar-label {
-  font-size: 13px;
-  color: #333;
-}
-
-.bar-track {
-  height: 14px;
-  background-color: #ddd;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.bar-fill {
-  height: 100%;
-  background-color: #000;
-  border-radius: 999px;
-}
-
-.bar-value {
-  font-size: 13px;
-  text-align: right;
-  color: #333;
-}
-.line-chart-wrapper {
+.diagram-bars {
   width: 100%;
-  margin-top: 12px;
-}
-
-.line-chart-svg {
-  width: 100%;
-  height: 220px;
-
-  background-color: var(--surface-soft);
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  padding: 8px;
-}
-
-.chart-axis {
-  stroke: #9ca3af;
-  stroke-width: 1;
-}
-
-.line-chart-polyline {
-  fill: none;
-  stroke: var(--primary);
-  stroke-width: 4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.line-chart-point {
-  fill: var(--primary-dark);
-  stroke: #ffffff;
-  stroke-width: 2;
-}
-
-.line-chart-labels {
+  height: 205px;
   display: flex;
-  justify-content: space-between;
-  margin-top: 8px;
-
-  color: var(--text-muted);
-  font-size: 12px;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 8px 8px;
+  border-bottom: 2px solid #ccd8c8;
 }
 
-.line-chart-summary {
-  margin: 10px 0 0;
-  text-align: center;
+.diagram-bar-wrapper {
+  width: 16px;
+  height: 190px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
 
-  color: var(--text-muted);
+.diagram-bar {
+  width: 100%;
+  min-height: 4px;
+  border-radius: 7px 7px 0 0;
+  transition: height 0.25s ease;
+}
+
+.diagram-bar:hover {
+  filter: brightness(1.08);
+}
+
+.calories-bar {
+  background: #000000;
+}
+
+.protein-bar {
+  background: #a50021;
+}
+
+.fats-bar {
+  background: #f0d400;
+}
+
+.carbs-bar {
+  background: #3ab75c;
+}
+
+.diagram-day-label {
+  margin-top: 10px;
   font-size: 13px;
+  font-weight: 700;
+  color: #40794f;
+  text-align: center;
+  white-space: nowrap;
 }
+
+.diagram-day-date {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #687566;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.diagram-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px 20px;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #e1e8dd;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: #2c3c2f;
+}
+
+.legend-color {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+  .nutrition-diagram-card {
+    margin-top: 28px;
+    padding: 18px 16px;
+  }
+
+  .diagram-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .diagram-vertical-chart {
+    justify-content: flex-start;
+    gap: 14px;
+  }
+
+  .diagram-day-group {
+    min-width: 84px;
+  }
+
+  .diagram-bar-wrapper {
+    width: 14px;
+  }
+
+  .diagram-bars {
+    gap: 5px;
+  }
+}
+
 @media (max-width: 700px) {
   .diagram-card {
     width: 100%;
-  }
-
-  .diagram-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .diagram-controls select {
-    width: 100%;
-  }
-
-  .bar-chart-row {
-    grid-template-columns: 1fr;
-  }
-
-  .bar-value {
-    text-align: left;
   }
 }
 

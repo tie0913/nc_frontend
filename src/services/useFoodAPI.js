@@ -123,6 +123,30 @@ export async function getFoodLogsAPI(page = 1, pageSize = 100) {
   return result;
 }
 
+export async function deleteFoodLogAPI(logId) {
+  if (!logId) {
+    return{
+      code: 1,
+      message: "Log ID is required for deletion.",
+      data: null,
+    }
+  }
+
+  const query = new URLSearchParams({
+    id: String(logId),
+  });
+
+  console.log("[FoodLog API] DELETE /foodlog query:", query.toString());
+
+  const result = await apiRequest(`/foodlog?${query.toString()}`, {
+    method: "DELETE",
+  });
+
+  console.log("[FoodLog API] DELETE /foodlog response:", result);
+
+  return result;
+}
+
 export async function getDiagramDataAPI(startDate, endDate) {
   const query = new URLSearchParams({
     start_date: startDate,
@@ -139,8 +163,17 @@ export async function getDiagramDataAPI(startDate, endDate) {
 
   return result;
 }
+export function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 export function getDateNDaysAgo(days) {
   const date = new Date();
   date.setDate(date.getDate() - days);
-  return date.toISOString().split("T")[0];
+
+  return formatLocalDate(date);
 }

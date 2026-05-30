@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref, watch } from "vue";
-import { searchFood, createFoodLogAPI, getFoodLogsAPI, getDiagramDataAPI } from "../services/useFoodAPI";
+import { searchFood, createFoodLogAPI, getFoodLogsAPI, getDiagramDataAPI, deleteFoodLogAPI } from "../services/useFoodAPI";
 
 const props = defineProps({
   currentUser: {
@@ -50,8 +50,24 @@ watch(
   {immediate: true}
 )
 
-function getDateOnly(dateValue){
-  return new Date(dateValue).toISOString().split("T")[0];
+function getDateOnly(dateValue) {
+  if (!dateValue) {
+    return "";
+  }
+
+  if (typeof dateValue === "string") {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+      return dateValue;
+    }
+
+    return dateValue.slice(0, 10);
+  }
+
+  const year = dateValue.getFullYear();
+  const month = String(dateValue.getMonth() + 1).padStart(2, "0");
+  const day = String(dateValue.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 async function loadFoodLogs() {
@@ -76,9 +92,12 @@ async function loadFoodLogs() {
 
   const items = Array.isArray(result.data?.items) ? result.data.items : [];
 
-  foodLogs.value = items.filter(
-    (item) => getDateOnly(item.create_time) === getDateOnly(filterDate.value)
-  );
+foodLogs.value = items.filter((item) => {
+  const itemDate = getDateOnly(item.food_date || item.create_time);
+  const selectedDate = getDateOnly(filterDate.value);
+
+  return itemDate === selectedDate;
+});
 }
 
 async function fetchNutritionData() {
@@ -160,18 +179,28 @@ async function submitFood() {
   emit("food-log-changed", filterDate.value);
 }
 
-// function removeFood(foodId) {
-//   const result = deleteFoodLog(foodId);
+async function removeFood(foodId) {
 
-//   if (result.code !== 0) {
-//     alert(result.message);
-//     return;
-//   }
+  if (!props.currentUser?.id) {
+    emit("require-auth");
+    return;
+  }
 
-//   loadFoodLogs();
+  if(!foodId){
+    alert("Invalid food log ID.");
+    return;
+  }
+  const result = await deleteFoodLogAPI(foodId);
 
-//   emit("food-log-changed", filterDate.value);
-// }
+  if (result.code !== 0) {
+    alert(result.message || "Failed to delete food log.");
+    return;
+  }
+
+  await loadFoodLogs();
+
+  emit("food-log-changed", filterDate.value);
+}
 
 function changeFilterDate() {
   loadFoodLogs();
@@ -234,13 +263,13 @@ function resetForm() {
               <th>Carbs</th>
               <th>Protein</th>
               <th>Fat</th>
-              <!-- <th></th> -->
+              <th></th>
             </tr>
           </thead>
 
           <tbody>
             <tr v-if="foodLogs.length === 0">
-              <td colspan="6" class="empty-table-text">
+              <td colspan="7" class="empty-table-text">
                 {{
                   isLoadingFoodLogs
                     ? "Loading..."
@@ -256,15 +285,16 @@ function resetForm() {
               <td>{{ food.carbs }}</td>
               <td>{{ food.protein }}</td>
               <td>{{ food.fats }}</td>
-              <!-- <td>
+              <td>
                 <button
                   type="button"
                   class="delete-food-btn"
+                  title="Remove this food log"
                   @click="removeFood(food.id)"
                 >
                   -
                 </button>
-              </td> -->
+              </td>
             </tr>
           </tbody>
         </table>

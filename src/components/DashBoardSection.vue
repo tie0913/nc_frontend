@@ -1,6 +1,7 @@
 <script setup>
-import { computed, reactive, ref, watch } from "vue";
+import { computed, reactive, ref, watch, onMounted } from "vue";
 import { getProfileFromAPI, saveProfileToAPI } from "../services/profileAPI";
+import { getDiagramDataAPI } from "../services/useFoodAPI";
 
 const props = defineProps({
   currentUser: {
@@ -58,6 +59,23 @@ const isAddingDisease = ref(false);
 
 const newAllergy = ref("");
 const newDisease = ref("");
+
+const profileDraft = reactive({
+  weight: "",
+  height: "",
+});
+
+function startEditProfile() {
+  profileDraft.weight = profile.weight;
+  profileDraft.height = profile.height;
+  isEditingProfile.value = true;
+}
+
+function cancelEditProfile() {
+  profileDraft.weight = "";
+  profileDraft.height = "";
+  isEditingProfile.value = false;
+}
 watch(
   () => props.profileRefreshKey,
   async () => {
@@ -151,20 +169,28 @@ async function loadProfile() {
 }
 
 async function saveProfileInfo() {
-  if (Number(profile.weight) <= 0 || Number(profile.height) <= 0) {
+  const weight = Number(profileDraft.weight);
+  const height = Number(profileDraft.height);
+
+  if (!weight || weight <= 0 || !height || height <= 0) {
     alert("Weight and height must be greater than 0.");
     return;
   }
 
+  const payload = {
+    ...profile,
+    weight,
+    height,
+  };
   console.log("[Dashboard] POST /profile payload:", {
-    weight: profile.weight,
-    height: profile.height,
-    chronic: profile.chronic,
-    allergies: profile.allergies,
-    goals: profile.goals,
+    weight: payload.weight,
+    height: payload.height,
+    chronic: payload.chronic,
+    allergies: payload.allergies,
+    goals: payload.goals,
   });
 
-  const result = await saveProfileToAPI(profile);
+  const result = await saveProfileToAPI(payload);
 
   console.log("[Dashboard] POST /profile response:", result);
 
@@ -185,7 +211,7 @@ async function saveProfileInfo() {
     goals: Array.isArray(result.data.goals) ? result.data.goals : [],
   });
 
-  isEditingProfile.value = false;
+  cancelEditProfile();
   emit("profile-updated");
 }
 
@@ -261,68 +287,188 @@ const carbPercent = computed(() => {
   );
 });
 
-const selectedDiagramMetric = ref("calories");
-const selectedDiagramType = ref("bar");
+// const selectedDiagramMetric = ref("calories");
+// const selectedDiagramType = ref("bar");
 
-const diagramMetricOptions = [
-  { value: "calories", label: "Calories", suffix: "kcal" },
-  { value: "protein", label: "Protein", suffix: "g" },
-  { value: "carbs", label: "Carbs", suffix: "g" },
-  { value: "fats", label: "Fats", suffix: "g" },
-];
-const diagramTypeOptions = [
-  { value: "bar", label: "Bar Chart" },
-  { value: "line", label: "Line Chart" },
-];
-const selectedDiagramOption = computed(() => {
-  return (
-    diagramMetricOptions.find(
-      (option) => option.value === selectedDiagramMetric.value,
-    ) || diagramMetricOptions[0]
-  );
-});
+// const diagramMetricOptions = [
+//   { value: "calories", label: "Calories", suffix: "kcal" },
+//   { value: "protein", label: "Protein", suffix: "g" },
+//   { value: "carbs", label: "Carbs", suffix: "g" },
+//   { value: "fats", label: "Fats", suffix: "g" },
+// ];
+// const diagramTypeOptions = [
+//   { value: "bar", label: "Bar Chart" },
+//   { value: "line", label: "Line Chart" },
+// ];
+// const selectedDiagramOption = computed(() => {
+//   return (
+//     diagramMetricOptions.find(
+//       (option) => option.value === selectedDiagramMetric.value,
+//     ) || diagramMetricOptions[0]
+//   );
+// });
 
-const maxDiagramValue = computed(() => {
-  if (!props.diagramData || props.diagramData.length === 0) {
-    return 0;
+// const maxDiagramValue = computed(() => {
+//   if (!props.diagramData || props.diagramData.length === 0) {
+//     return 0;
+//   }
+
+//   return Math.max(
+//     ...props.diagramData.map((item) => {
+//       return Number(item[selectedDiagramMetric.value]) || 0;
+//     }),
+//   );
+// });
+
+// const lineGraphPoints = computed(() => {
+//   if (!props.diagramData || props.diagramData.length === 0) {
+//     return "";
+//   }
+
+//   const chartWidth = 520;
+//   const chartHeight = 180;
+//   const padding = 24;
+
+//   const maxValue = maxDiagramValue.value || 1;
+//   const itemCount = props.diagramData.length;
+
+//   return props.diagramData
+//     .map((item, index) => {
+//       const value = Number(item[selectedDiagramMetric.value]) || 0;
+
+//       const x =
+//         itemCount === 1
+//           ? chartWidth / 2
+//           : padding + (index * (chartWidth - padding * 2)) / (itemCount - 1);
+
+//       const y =
+//         chartHeight -
+//         padding -
+//         (value / maxValue) * (chartHeight - padding * 2);
+
+//       return `${x},${y}`;
+//     })
+//     .join(" ");
+// });
+
+const diagramData = ref([]);
+const isDiagramLoading = ref(false);
+const diagramError = ref("");
+
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function getLast7Days() {
+  const days = [];
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+
+    days.push({
+      date: formatLocalDate(date),
+      label: i === 0 ? "Today" : i === 1 ? "Yesterday" : formatLocalDate(date),
+    });
   }
 
-  return Math.max(
-    ...props.diagramData.map((item) => {
-      return Number(item[selectedDiagramMetric.value]) || 0;
-    }),
-  );
-});
+  return days;
+}
 
-const lineGraphPoints = computed(() => {
-  if (!props.diagramData || props.diagramData.length === 0) {
-    return "";
+async function loadDiagramData() {
+  isDiagramLoading.value = true;
+  diagramError.value = "";
+
+  try {
+    const last7Days = getLast7Days();
+
+    const endDate = last7Days[0].date;
+    const startDate = last7Days[last7Days.length - 1].date;
+
+    const result = await getDiagramDataAPI(startDate, endDate);
+
+    if (result.code !== 0) {
+      diagramData.value = [];
+      diagramError.value = result.message || "Failed to load diagram data.";
+      return;
+    }
+
+    diagramData.value = Array.isArray(result.data) ? result.data : [];
+  } catch (error) {
+    diagramData.value = [];
+    diagramError.value = error.message || "Failed to load diagram data.";
+  } finally {
+    isDiagramLoading.value = false;
+  }
+}
+
+const diagram7Days = computed(() => {
+  const apiMap = new Map();
+
+  for (const item of diagramData.value) {
+    apiMap.set(item.date, item);
   }
 
-  const chartWidth = 520;
-  const chartHeight = 180;
-  const padding = 24;
+  return getLast7Days().map((day) => {
+    const matched = apiMap.get(day.date);
 
-  const maxValue = maxDiagramValue.value || 1;
-  const itemCount = props.diagramData.length;
+    return {
+      date: day.date,
+      label: day.label,
+      calories: Number(matched?.calories || 0),
+      protein: Number(matched?.protein || 0),
+      fats: Number(matched?.fats || 0),
+      carbs: Number(matched?.carbs || 0),
+    };
+  });
+});
 
-  return props.diagramData
-    .map((item, index) => {
-      const value = Number(item[selectedDiagramMetric.value]) || 0;
+const diagramMaxValues = computed(() => {
+  const maxValues = {
+    calories: 1,
+    protein: 1,
+    fats: 1,
+    carbs: 1,
+  };
 
-      const x =
-        itemCount === 1
-          ? chartWidth / 2
-          : padding + (index * (chartWidth - padding * 2)) / (itemCount - 1);
+  for (const day of diagram7Days.value) {
+    maxValues.calories = Math.max(maxValues.calories, day.calories);
+    maxValues.protein = Math.max(maxValues.protein, day.protein);
+    maxValues.fats = Math.max(maxValues.fats, day.fats);
+    maxValues.carbs = Math.max(maxValues.carbs, day.carbs);
+  }
 
-      const y =
-        chartHeight -
-        padding -
-        (value / maxValue) * (chartHeight - padding * 2);
+  return maxValues;
+});
 
-      return `${x},${y}`;
-    })
-    .join(" ");
+function getDiagramBarHeight(value, metric) {
+  const max = diagramMaxValues.value[metric] || 1;
+
+  if (!value || value <= 0) {
+    return "4px";
+  }
+
+  const maxHeight = 180;
+  const minHeight = 10;
+  const height = (Number(value) / max) * maxHeight;
+
+  return `${Math.max(height, minHeight)}px`;
+}
+
+function formatDiagramValue(value, metric) {
+  if (metric === "calories") {
+    return `${Math.round(value)} kcal`;
+  }
+
+  return `${Math.round(value)} g`;
+}
+
+onMounted(async () => {
+  await loadDiagramData();
 });
 </script>
 
@@ -372,7 +518,7 @@ const lineGraphPoints = computed(() => {
                 <label>
                   Weight:
                   <input
-                    v-model.number="profile.weight"
+                    v-model.number="profileDraft.weight"
                     type="number"
                     min="1"
                     step="0.1"
@@ -383,7 +529,7 @@ const lineGraphPoints = computed(() => {
                 <label>
                   Height:
                   <input
-                    v-model.number="profile.height"
+                    v-model.number="profileDraft.height"
                     type="number"
                     min="0.1"
                     step="0.01"
@@ -403,7 +549,7 @@ const lineGraphPoints = computed(() => {
                 v-if="!isEditingProfile"
                 class="edit-btn"
                 type="button"
-                @click="isEditingProfile = true"
+                @click="startEditProfile"
               >
                 Edit
               </button>
@@ -416,7 +562,7 @@ const lineGraphPoints = computed(() => {
                 <button
                   type="button"
                   class="cancel-btn"
-                  @click="isEditingProfile = false"
+                  @click="cancelEditProfile"
                 >
                   Cancel
                 </button>
@@ -611,117 +757,102 @@ const lineGraphPoints = computed(() => {
       </div>
 
       <!-- Bottom diagram placeholder -->
-      <div class="diagram-card">
+      <section class="diagram-card">
         <div class="diagram-header">
           <h3>Nutrition Diagram</h3>
-
-          <div class="diagram-controls">
-            <label>
-              Type:
-              <select v-model="selectedDiagramType">
-                <option
-                  v-for="option in diagramTypeOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </label>
-
-            <label>
-              Metric:
-              <select v-model="selectedDiagramMetric">
-                <option
-                  v-for="option in diagramMetricOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </label>
-          </div>
+          <button
+            type="button"
+            class="diagram-refresh-btn"
+            @click="loadDiagramData"
+          >
+            Refresh
+          </button>
+        </div>
+        <div v-if="isDiagramLoading" class="diagram-status">
+          Loading diagram...
         </div>
 
-        <p v-if="diagramData.length === 0" class="empty-text">
-          No diagram data available for this date.
-        </p>
+        <div v-else-if="diagramError" class="diagram-status diagram-error">
+          {{ diagramError }}
+        </div>
 
-        <!-- Bar Progress Diagram -->
-        <div v-else-if="selectedDiagramType === 'bar'" class="bar-chart">
+        <div v-else class="diagram-vertical-chart">
           <div
-            v-for="item in diagramData"
-            :key="item.date"
-            class="bar-chart-row"
+            v-for="day in diagram7Days"
+            :key="day.date"
+            class="diagram-day-group"
           >
-            <span class="bar-label">{{ item.date }}</span>
+            <div class="diagram-bars">
+              <div class="diagram-bar-wrapper">
+                <div
+                  class="diagram-bar calories-bar"
+                  :style="{
+                    height: getDiagramBarHeight(day.calories, 'calories'),
+                  }"
+                  :title="`Calories: ${formatDiagramValue(day.calories, 'calories')}`"
+                ></div>
+              </div>
 
-            <div class="bar-track">
-              <div
-                class="bar-fill"
-                :style="{
-                  width:
-                    maxDiagramValue > 0
-                      ? ((Number(item[selectedDiagramMetric]) || 0) /
-                          maxDiagramValue) *
-                          100 +
-                        '%'
-                      : '0%',
-                }"
-              ></div>
+              <div class="diagram-bar-wrapper">
+                <div
+                  class="diagram-bar protein-bar"
+                  :style="{
+                    height: getDiagramBarHeight(day.protein, 'protein'),
+                  }"
+                  :title="`Protein: ${formatDiagramValue(day.protein, 'protein')}`"
+                ></div>
+              </div>
+
+              <div class="diagram-bar-wrapper">
+                <div
+                  class="diagram-bar fats-bar"
+                  :style="{ height: getDiagramBarHeight(day.fats, 'fats') }"
+                  :title="`Fats: ${formatDiagramValue(day.fats, 'fats')}`"
+                ></div>
+              </div>
+
+              <div class="diagram-bar-wrapper">
+                <div
+                  class="diagram-bar carbs-bar"
+                  :style="{ height: getDiagramBarHeight(day.carbs, 'carbs') }"
+                  :title="`Carbs: ${formatDiagramValue(day.carbs, 'carbs')}`"
+                ></div>
+              </div>
             </div>
 
-            <span class="bar-value">
-              {{ item[selectedDiagramMetric] || 0 }}
-              {{ selectedDiagramOption.suffix }}
-            </span>
+            <div class="diagram-day-label">
+              {{ day.label }}
+            </div>
+
+            <div class="diagram-day-date">
+              {{ day.date }}
+            </div>
           </div>
         </div>
 
-        <!-- Line Graph Diagram -->
-        <div v-else class="line-chart-wrapper">
-          <svg
-            class="line-chart-svg"
-            viewBox="0 0 520 180"
-            preserveAspectRatio="none"
-          >
-            <line x1="24" y1="156" x2="496" y2="156" class="chart-axis" />
-            <line x1="24" y1="24" x2="24" y2="156" class="chart-axis" />
-
-            <polyline :points="lineGraphPoints" class="line-chart-polyline" />
-
-            <circle
-              v-for="(item, index) in diagramData"
-              :key="`point-${item.date}`"
-              class="line-chart-point"
-              :cx="
-                diagramData.length === 1
-                  ? 260
-                  : 24 + (index * (520 - 48)) / (diagramData.length - 1)
-              "
-              :cy="
-                180 -
-                24 -
-                ((Number(item[selectedDiagramMetric]) || 0) /
-                  (maxDiagramValue || 1)) *
-                  (180 - 48)
-              "
-              r="4"
-            />
-          </svg>
-
-          <div class="line-chart-labels">
-            <span v-for="item in diagramData" :key="`label-${item.date}`">
-              {{ item.date.slice(5) }}
-            </span>
+        <div class="diagram-legend">
+          <div class="legend-item">
+            <span class="legend-color calories-bar"></span>
+            <span>Calories</span>
           </div>
 
-          <p class="line-chart-summary">
-            Showing {{ selectedDiagramOption.label }} trend by date.
-          </p>
+          <div class="legend-item">
+            <span class="legend-color protein-bar"></span>
+            <span>Protein</span>
+          </div>
+
+          <div class="legend-item">
+            <span class="legend-color fats-bar"></span>
+            <span>Fats</span>
+          </div>
+
+          <div class="legend-item">
+            <span class="legend-color carbs-bar"></span>
+            <span>Carbs</span>
+          </div>
         </div>
-      </div>
+
+      </section>
     </template>
   </section>
 </template>

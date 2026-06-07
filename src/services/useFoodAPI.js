@@ -1,5 +1,5 @@
 import { apiRequest } from "./apiClient";
-const API_KEY = "XgbOn8NEonyrgz3eHJ3tx4eYRXMWqU4oP0fbdGOC";
+const API_KEY = import.meta.env.VITE_USDA_API_KEY;
 const API_BASE_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
 
 function createResult(code, message, data) {

@@ -1,4 +1,39 @@
-export function generateMockMealPlan({ profile, goals, weeklyFoodSummary }) {
+import { apiRequest } from "./apiClient";
+export async function generateMealPlanAPI(budget){
+  const payload = {
+    budget: Number(budget),
+  };
+
+  console.log("[MealPlan API] POST /plan payload:", payload);
+
+  const result = await apiRequest("/plan", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    } );
+
+    console.log("[MealPlan API] POST /plan Response:", result);
+
+    return result;
+}
+
+export async function getMealPlanAPI(page = 1, pageSize = 10){
+  const query = new URLSearchParams({
+    page: String(page),
+    pageSize: String(pageSize),
+  });
+
+  console.log("[MealPlan API] GET /plan query:", query.toString());
+
+  const result = await apiRequest(`/plan?${query.toString()}`, {
+    method: "GET",
+  });
+
+  console.log("[MealPlan API] GET /plan Response:", result);
+
+  return result;
+}
+
+export function generateMockMealPlan({ profile, goals, weeklyFoodSummary, budget }) {
   const today = new Date().toISOString().split("T")[0];
 
   const totalCalories = weeklyFoodSummary.reduce((sum, item) => {
@@ -15,9 +50,16 @@ export function generateMockMealPlan({ profile, goals, weeklyFoodSummary }) {
       ? goals.map((goal) => `+ ${goal}`).join("\n")
       : "+ No goals provided yet.";
 
+  const budgetLine = budget
+    ? `- Budget: $${Number(budget).toFixed(2)}`
+    : "- Budget: Not provided.";
+
   return `Date: ${today}
 
 Introduction Part
+- [ 1-2 Sen]
+${budgetLine}
+
 - Goals:
 ${goalLines}
 
@@ -25,6 +67,7 @@ Body Part:
 - Breakfast:
 + Oatmeal with fruit and low-fat milk.
 + Add boiled eggs or Greek yogurt if protein intake is low.
+
 
 - Lunch:
 + Grilled chicken or tofu with rice and vegetables.

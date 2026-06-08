@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="480" viewBox="0 0 480 480" fill="none">
+  <g stroke="#ffffff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.92">
+
+    <!-- Apple -->
+    <g transform="translate(28,24)">
+      <path d="M40 28C34 18 25 16 18 22C8 31 9 52 21 67C28 76 38 78 46 70C54 78 64 76 71 67C83 52 84 31 74 22C67 16 58 18 52 28"></path>
+      <path d="M46 20C45 12 50 7 58 6"></path>
+      <path d="M46 18C42 11 35 8 29 10"></path>
+    </g>
+
+    <!-- Burger -->
+    <g transform="translate(178,28)">
+      <path d="M18 42C18 28 30 18 46 18C62 18 74 28 74 42"></path>
+      <path d="M18 42H74"></path>
+      <path d="M20 54H72"></path>
+      <path d="M24 64H68"></path>
+      <path d="M26 32H66"></path>
+      <path d="M34 26H35"></path>
+      <path d="M45 24H46"></path>
+      <path d="M56 27H57"></path>
+    </g>
+
+    <!-- Carrot -->
+    <g transform="translate(336,24)">
+      <path d="M44 18C53 26 58 39 53 54C49 67 39 76 27 84C19 67 16 55 20 43C24 30 33 22 44 18Z"></path>
+      <path d="M44 18C41 10 46 4 53 2"></path>
+      <path d="M47 17C54 13 61 14 66 19"></path>
+      <path d="M33 40L42 49"></path>
+      <path d="M28 52L37 60"></path>
+      <path d="M24 64L31 71"></path>
+    </g>
+
+    <!-- Bowl -->
+    <g transform="translate(28,164)">
+      <path d="M14 34C14 53 29 68 48 68C67 68 82 53 82 34H14Z"></path>
+      <path d="M10 34H86"></path>
+      <path d="M28 23C25 18 25 12 29 8"></path>
+      <path d="M46 20C43 15 43 10 46 6"></path>
+      <path d="M62 23C59 18 59 12 63 8"></path>
+      <path d="M32 45V57"></path>
+      <path d="M45 40V57"></path>
+      <path d="M58 36V57"></path>
+    </g>
+
+    <!-- Fish -->
+    <g transform="translate(184,160)">
+      <path d="M20 46C31 27 55 22 73 34C84 29 92 20 97 12V34C103 39 106 46 106 52C106 58 103 65 97 70V92C92 84 84 75 73 70C55 82 31 77 20 58H9V46H20Z"></path>
+      <circle cx="72" cy="46" r="2.6" fill="#ffffff" stroke="none"></circle>
+      <path d="M30 40C36 45 36 59 30 64"></path>
+    </g>
+
+    <!-- Bread -->
+    <g transform="translate(336,166)">
+      <path d="M22 62V42C22 28 33 18 46 18C53 18 59 21 64 26C69 21 75 18 82 18C95 18 106 28 106 42V62C106 71 99 78 90 78H38C29 78 22 71 22 62Z"></path>
+      <path d="M43 32C45 36 44 41 40 44"></path>
+      <path d="M61 30C63 34 62 39 58 42"></path>
+      <path d="M80 32C82 36 81 41 77 44"></path>
+    </g>
+
+    <!-- Banana -->
+    <g transform="translate(22,316)">
+      <path d="M20 58C34 74 63 77 86 62C97 54 104 44 106 33C92 40 75 44 58 42C43 40 29 34 18 24C14 35 12 48 20 58Z"></path>
+      <path d="M18 24C15 18 16 10 22 6"></path>
+    </g>
+
+    <!-- Milk / bottle -->
+    <g transform="translate(188,320)">
+      <path d="M42 16H62"></path>
+      <path d="M46 16V30L34 48V78C34 84 39 88 45 88H59C65 88 70 84 70 78V48L58 30V16"></path>
+      <path d="M42 50H62"></path>
+    </g>
+
+    <!-- Avocado -->
+    <g transform="translate(336,314)">
+      <path d="M62 24C77 34 84 50 80 66C75 83 63 95 48 95C33 95 21 83 16 66C12 50 19 34 34 24C42 18 54 18 62 24Z"></path>
+      <path d="M56 60C56 68 50 74 43 74C36 74 30 68 30 60C30 52 36 46 43 46C50 46 56 52 56 60Z"></path>
+    </g>
+
+  </g>
+</svg>

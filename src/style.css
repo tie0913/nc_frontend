@@ -1,6 +1,11 @@
 :root {
   color-scheme: light;
 
+  --food-pattern-url: url("/src/assets/food-pattern.svg");
+
+  --food-pattern-base: rgba(47, 111, 78, 0.08);
+  --food-sweep-color: rgba(170, 230, 170, 0.45);
+
   --app-bg: #f6f8ef;
   --surface: #fffdf7;
   --surface-soft: #f1f6e9;
@@ -123,7 +128,8 @@ html[data-theme="dark"] {
   --theme-thumb-icon-color: #d0a062;
 
   --nav-title-color: #f4f0dc;
-
+  --food-pattern-base: rgba(244, 240, 220, 0.055);
+  --food-sweep-color: rgba(244, 240, 220, 0.38);
 }
 
 /* Navbar */
@@ -335,13 +341,95 @@ html[data-theme="dark"] .page-section h2::after {
 /* ==================================== */
 
 html,
-body {
-  background-color: var(--app-bg);
-  color: var(--text-main);
+body,
+#app {
+  min-height: 100vh;
 }
 
 body {
-  min-height: 100vh;
+
+  position: relative;
+  overflow-x: hidden;
+
+  background:
+    radial-gradient(circle at 20% 15%, rgba(120, 168, 139, 0.10), transparent 20%),
+    radial-gradient(circle at 80% 25%, rgba(208, 160, 98, 0.08), transparent 22%),
+    radial-gradient(circle at 50% 70%, rgba(120, 168, 139, 0.08), transparent 24%),
+    var(--app-bg);
+}
+
+/* Keep real content above decorative layers */
+#app {
+  position: relative;
+  z-index: 1;
+}
+
+/* Base hidden food pattern */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background-color: var(--food-pattern-base);
+
+  -webkit-mask-image: var(--food-pattern-url);
+  -webkit-mask-repeat: repeat;
+  -webkit-mask-size: 360px 360px;
+  -webkit-mask-position: center top;
+
+  mask-image: var(--food-pattern-url);
+  mask-repeat: repeat;
+  mask-size: 360px 360px;
+  mask-position: center top;
+
+  opacity: 0.35;
+}
+
+/* Animated light sweep, visible only on SVG strokes */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  background:
+    linear-gradient(to bottom,
+      transparent 0%,
+      transparent 38%,
+      var(--food-sweep-color) 48%,
+      rgba(255, 255, 255, 0.12) 50%,
+      var(--food-sweep-color) 52%,
+      transparent 62%,
+      transparent 100%);
+
+  background-size: 100% 300%;
+  background-position: 0 -160%;
+
+  -webkit-mask-image: var(--food-pattern-url);
+  -webkit-mask-repeat: repeat;
+  -webkit-mask-size: 360px 360px;
+  -webkit-mask-position: center top;
+
+  mask-image: var(--food-pattern-url);
+  mask-repeat: repeat;
+  mask-size: 360px 360px;
+  mask-position: center top;
+
+  opacity: 0.39;
+  animation: foodStrokeSweep 7s linear infinite;
+}
+
+@keyframes foodStrokeSweep {
+  0% {
+    background-position: 0 -160%;
+  }
+
+  100% {
+    background-position: 0 180%;
+  }
 }
 
 button,
@@ -615,7 +703,8 @@ html[data-theme="dark"] .theme-toggle.theme-toggle-dark .theme-thumb-icon {
 
 .theme-toggle.theme-toggle-dark .theme-icon-moon {
   opacity: 0;
-  transform: scale(0.85);}
+  transform: scale(0.85);
+}
 
 html[data-theme="dark"] .theme-icon-moon {
   color: var(--nav-title-color);
@@ -1887,6 +1976,7 @@ html[data-theme="dark"] .food-filter-row button {
 .meal-plan-text::-webkit-scrollbar-thumb:hover {
   background: #8da195;
 }
+
 .meal-plan-text::after {
   content: "▌";
   display: inline-block;
@@ -1896,14 +1986,18 @@ html[data-theme="dark"] .food-filter-row button {
 }
 
 @keyframes typingCursorBlink {
-  0%, 45% {
+
+  0%,
+  45% {
     opacity: 1;
   }
 
-  46%, 100% {
+  46%,
+  100% {
     opacity: 0;
   }
 }
+
 .generate-meal-btn {
   align-self: center;
   margin-top: 22px;

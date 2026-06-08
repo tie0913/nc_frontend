@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, reactive, ref } from "vue";
+import { onMounted, reactive, ref, computed } from "vue";
 import NavBar from "./components/NavBar.vue";
 import DashBoardSection from "./components/DashBoardSection.vue";
 import FoodLogSection from "./components/FoodLogSection.vue";
@@ -21,6 +21,7 @@ const isSignedIn = ref(false);
 
 const authModalMode = ref(null);
 const isProfileModalOpen = ref(false);
+const isDarkScreen = ref(false);
 
 const profileRefreshTrigger = ref(0);
 
@@ -35,7 +36,38 @@ const dailyNutrition = reactive({
   carbTarget: 0,
 });
 
+const themeIcon = computed(() => {
+  return isDarkScreen.value ? "🌙" : "☀️";
+});
+
+const themeLabel = computed(() => {
+  return isDarkScreen.value ? "Dark mode" : "Light mode";
+});
+
+function applyTheme() {
+  const theme = isDarkScreen.value ? "dark" : "light";
+
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("nutrition_theme", theme);
+}
+
+function toggleTheme() {
+  isDarkScreen.value = !isDarkScreen.value;
+  applyTheme();
+}
+
 onMounted(async () => {
+  const savedTheme = localStorage.getItem("nutrition_theme");
+
+  if (savedTheme === "dark") {
+    isDarkScreen.value = true;
+  } else if (savedTheme === "light") {
+    isDarkScreen.value = false;
+  } else {
+    isDarkScreen.value = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  applyTheme();
   await restoreSession();
   await refreshDailyNutrition(selectedFoodDate.value);
 });
@@ -207,9 +239,12 @@ function signOut() {
 <template>
   <NavBar
     :is-signed-in="isSignedIn"
+    :is-dark-screen="isDarkScreen"
+    :theme-label="themeLabel"
     @open-auth="openAuthModal"
     @open-profile="openProfileModal"
     @sign-out="signOut"
+    @toggle-theme="toggleTheme"
   />
 
   <main class="main-container">

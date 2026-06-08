@@ -14,6 +14,11 @@ const budget = ref("");
 const goals = ref([]);
 const newGoal = ref("");
 const mealPlanText = ref("");
+const mealPlanTextRef = ref(null);
+
+let typingTimer = null;
+let typingRunId = 0;
+
 const profile = ref(null);
 const weeklyFoodSummary = ref([]);
 
@@ -36,6 +41,65 @@ watch(
   },
   { immediate: true }
 );
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function scrollMealPlanToBottom() {
+  if (!mealPlanTextRef.value) {
+    return;
+  }
+
+  mealPlanTextRef.value.scrollTo({
+    top: mealPlanTextRef.value.scrollHeight,
+    behavior: "smooth",
+  });
+}
+
+async function typeMealPlanText(fullText) {
+  typingRunId += 1;
+  const currentRunId = typingRunId;
+
+  if (typingTimer) {
+    clearTimeout(typingTimer);
+    typingTimer = null;
+  }
+
+  mealPlanText.value = "";
+
+  const text = String(fullText || "");
+  const typingSpeed = 14; // smaller = faster
+  const scrollEveryLines = 6;
+
+  let previousLineCount = 1;
+  let nextScrollLineMark = scrollEveryLines;
+
+  for (let i = 0; i < text.length; i++) {
+    if (currentRunId !== typingRunId) {
+      return;
+    }
+
+    mealPlanText.value += text[i];
+
+    const currentLineCount = mealPlanText.value.split("\n").length;
+
+    if (
+      currentLineCount !== previousLineCount &&
+      currentLineCount >= nextScrollLineMark
+    ) {
+      scrollMealPlanToBottom();
+      nextScrollLineMark += scrollEveryLines;
+    }
+
+    previousLineCount = currentLineCount;
+
+    await wait(typingSpeed);
+  }
+
+  scrollMealPlanToBottom();
+}
+
 function formatMealPlanFromAPI(plan){
   if (!plan){
     return "No meal plan was generated";
@@ -141,51 +205,57 @@ async function loadMealPlanData() {
   isLoading.value = false;
 }
 
-async function generateMealPlan(){
-  if (!props.currentUser?.id){
+async function generateMealPlan() {
+  if (!props.currentUser?.id) {
     errorMessage.value = "Please sign in before generating a meal plan.";
     return;
   }
 
   const budgetValue = Number(budget.value);
 
-  if(!budgetValue || budgetValue <= 0){
+  if (!budgetValue || budgetValue <= 0) {
     errorMessage.value = "Please enter a valid positive number for budget.";
     return;
   }
 
   errorMessage.value = "";
   isGenerating.value = true;
+  mealPlanText.value = "";
 
-  try{
+  try {
     await saveGoalsToProfile();
 
     const result = await generateMealPlanAPI(budgetValue);
 
-    if(result.code !== 0){
+    if (result.code !== 0) {
       errorMessage.value = result.message || "Failed to generate meal plan.";
 
-      mealPlanText.value = generateMockMealPlan({
+      const mockText = generateMockMealPlan({
         profile: profile.value,
         goals: goals.value,
         weeklyFoodSummary: weeklyFoodSummary.value,
         budget: budgetValue,
       });
+
+      await typeMealPlanText(mockText);
       return;
     }
 
-    mealPlanText.value = formatMealPlanFromAPI(result.data);
-  } catch (error){
+    const generatedText = formatMealPlanFromAPI(result.data);
+    await typeMealPlanText(generatedText);
+  } catch (error) {
     errorMessage.value = "An error occurred while generating the meal plan.";
-    mealPlanText.value = generateMockMealPlan({
+
+    const mockText = generateMockMealPlan({
       profile: profile.value,
       goals: goals.value,
       weeklyFoodSummary: weeklyFoodSummary.value,
       budget: budgetValue,
     });
+
+    await typeMealPlanText(mockText);
   } finally {
     isGenerating.value = false;
-
   }
 }
 function addGoal() {
@@ -240,7 +310,7 @@ async function saveGoalsToProfile() {
           Loading meal plan data...
         </p>
 
-        <pre v-else-if="mealPlanText" class="meal-plan-text">{{ mealPlanText }}</pre>
+        <pre v-else-if="mealPlanText || isGenerating" ref="mealPlanTextRef" class="meal-plan-text">{{ mealPlanText }}</pre>
 
         <div v-else class="meal-plan-placeholder">
           [AI Generate Text]
